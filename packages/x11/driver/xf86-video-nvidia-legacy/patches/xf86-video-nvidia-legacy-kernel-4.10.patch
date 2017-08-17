@@ -1,19 +1,10 @@
 diff -Naur a/kernel/nv-linux.h b/kernel/nv-linux.h
 --- a/kernel/nv-linux.h
 +++ b/kernel/nv-linux.h
-@@ -2082,6 +2082,8 @@ static inline NvU64 nv_node_end_pfn(int nid)
-  *    2016 Dec 14:5b56d49fc31dbb0487e14ead790fc81ca9fb2c99
-  */
-
-+#include <linux/version.h>
-+
- #if defined(NV_GET_USER_PAGES_REMOTE_PRESENT)
-     #if defined(NV_GET_USER_PAGES_HAS_WRITE_AND_FORCE_ARGS)
-         #define NV_GET_USER_PAGES           get_user_pages
-@@ -2129,8 +2131,13 @@ static inline NvU64 nv_node_end_pfn(int nid)
-
+@@ -1895,8 +1895,13 @@ static inline NvU64 nv_node_end_pfn(int nid)
+ 
          #else
-
+ 
 +#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
                 return get_user_pages_remote(tsk, mm, start, nr_pages, flags,
                                              pages, vmas);
@@ -21,22 +12,22 @@ diff -Naur a/kernel/nv-linux.h b/kernel/nv-linux.h
 +               return get_user_pages_remote(tsk, mm, start, nr_pages, flags,
 +                                            pages, vmas, NULL);
 +#endif
-
+ 
          #endif
-
+ 
 diff -Naur a/kernel/nv-pat.c b/kernel/nv-pat.c
 --- a/kernel/nv-pat.c
 +++ b/kernel/nv-pat.c
 @@ -203,6 +203,7 @@ void nv_disable_pat_support(void)
  }
-
+ 
  #if defined(NV_ENABLE_PAT_SUPPORT) && defined(NV_ENABLE_HOTPLUG_CPU)
 +#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
  static int
- nvidia_cpu_callback(struct notifier_block *nfb, unsigned long action, void *hcpu)
+ nv_kern_cpu_callback(struct notifier_block *nfb, unsigned long action, void *hcpu)
  {
 @@ -234,6 +235,34 @@ static struct notifier_block nv_hotcpu_nfb = {
-     .notifier_call = nvidia_cpu_callback,
+     .notifier_call = nv_kern_cpu_callback,
      .priority = 0
  };
 +#else
@@ -68,7 +59,7 @@ diff -Naur a/kernel/nv-pat.c b/kernel/nv-pat.c
 +#endif
 +
  #endif
-
+ 
  int nv_init_pat_support(nv_stack_t *sp)
 @@ -255,7 +284,14 @@ int nv_init_pat_support(nv_stack_t *sp)
  #if defined(NV_ENABLE_PAT_SUPPORT) && defined(NV_ENABLE_HOTPLUG_CPU)
@@ -97,18 +88,3 @@ diff -Naur a/kernel/nv-pat.c b/kernel/nv-pat.c
  #endif
      }
  }
-diff -Naur a/kernel/uvm/nvidia_uvm_lite.c b/kernel/uvm/nvidia_uvm_lite.c
---- a/kernel/uvm/nvidia_uvm_lite.c
-+++ b/kernel/uvm/nvidia_uvm_lite.c
-@@ -820,7 +820,11 @@ done:
- #if defined(NV_VM_OPERATIONS_STRUCT_HAS_FAULT)
- int _fault(struct vm_area_struct *vma, struct vm_fault *vmf)
- {
-+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
-     unsigned long vaddr = (unsigned long)vmf->virtual_address;
-+#else
-+    unsigned long vaddr = (unsigned long)vmf->address;
-+#endif
-     struct page *page = NULL;
-     int retval;
-
